@@ -30,13 +30,13 @@ public class RsmIntegrationTest {
 		broker.start();
 	}
 	
-	
 	@Test
 	public void sendMessageOnQueueTest() throws InterruptedException{
 		Rsm.brokerUrl(BROKER_URL);
-		Rsm.listen(DESTINATION_QUEUE, this::onQueueMessage);
-		Rsm.listen(DESTINATION_QUEUE, this::onQueueMessage);
-		Rsm.send(DESTINATION_QUEUE, MSG);
+		Queue q = new Queue(DESTINATION_QUEUE);
+		Rsm.listen(q, this::onQueueMessage);
+		Rsm.listen(q, this::onQueueMessage);
+		Rsm.send(q, MSG);
 		Thread.sleep(200);
 		assertEquals(MSG, queueMsg);
 		assertEquals(1, recievedMessagesOnQueue.get());
@@ -45,13 +45,27 @@ public class RsmIntegrationTest {
 	@Test
 	public void sendMessageOnTopicTest() throws InterruptedException{
 		Rsm.brokerUrl(BROKER_URL);
-		Rsm.subscribe(DESTINATION_TOPIC, this::onTopicMessage);
-		Rsm.subscribe(DESTINATION_TOPIC, this::onTopicMessage);
-		Rsm.broadcast(DESTINATION_TOPIC, MSG2);
+		Topic t = new Topic(DESTINATION_TOPIC);
+		Rsm.subscribe(t, this::onTopicMessage);
+		Rsm.subscribe(t, this::onTopicMessage);
+		Rsm.broadcast(t, MSG2);
 		Thread.sleep(200);
 		assertEquals(MSG2, topicMsg);
 		assertEquals(2, recievedMessagesOnTopic.get());
 	}
+	
+	@Test
+	public void sendMessageOnTopicHandleResponseMultithreaded() throws InterruptedException{
+		Rsm.brokerUrl(BROKER_URL);
+		Topic t = new Topic(DESTINATION_TOPIC);
+		Rsm.subscribe(t, this::onTopicMessageSleep200);
+		Rsm.subscribe(t, this::onTopicMessageSleep200);
+		Rsm.broadcast(t, MSG2);
+		Thread.sleep(250);
+		assertEquals(MSG2, topicMsg);
+		assertEquals(2, recievedMessagesOnTopic.get());
+	}
+	
 	
 	private void onQueueMessage(String message){
 		queueMsg = message;
@@ -61,6 +75,12 @@ public class RsmIntegrationTest {
 	private void onTopicMessage(String message){
 		topicMsg = message;
 		recievedMessagesOnTopic.incrementAndGet();
+	}
+	
+	private void onTopicMessageSleep200(String message) throws InterruptedException{
+		topicMsg = message;
+		recievedMessagesOnTopic.incrementAndGet();
+		Thread.sleep(200);
 	}
 	
 	
